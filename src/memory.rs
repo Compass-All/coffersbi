@@ -127,7 +127,35 @@ fn _paddr_to_frame(paddr: usize) -> usize {
 
 
 // test
-pub fn coffer_memory_test() -> SbiRet {
+pub fn coffer_memory_test(test_id: usize) -> SbiRet {
+    match test_id {
+        0 => coffer_memory_test0(),
+        1 => coffer_memory_test1(),
+        _ => SbiRet::not_supported(),
+    }
+}
+
+fn coffer_memory_test1() -> SbiRet {
+    let paddr = 0x1_2000_0000;
+    let size = 0x100;
+    let mut buf = vec![0; size];
+    unsafe {
+        core::ptr::copy(paddr as *const u8, buf.as_mut_ptr(), size);
+    }
+    for i in 0..size / 16 {
+        let line = &buf[i * 16..(i + 1) * 16];
+        let mut line_str = format!("{:x}: ", paddr + i * 16);
+        for b in line {
+            line_str.push_str(&format!("{:02x} ", b));
+        }
+        log::debug!("{}", line_str);
+    }
+
+    SbiRet::success(0)
+}
+
+
+fn coffer_memory_test0() -> SbiRet {
     log::debug!("CofferSBI test");
 
     let heap_total = GLOBAL_HEAP.lock().stats_total_bytes();

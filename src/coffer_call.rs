@@ -24,7 +24,7 @@ pub fn handle_coffer_call(function: usize, param: [usize; 7]) -> SbiRet {
             coffer_mem_alloc(tmp_eid, param[0])
         },
         CofferCallFunc::COFFER_TEST => {
-            coffer_memory_test()
+            coffer_memory_test(param[0])
         },
         _ => SbiRet::not_supported(),
     }
