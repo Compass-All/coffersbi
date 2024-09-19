@@ -1,11 +1,12 @@
 use sbi_spec::binary::SbiRet;
-use crate::memory::{coffer_memory_init, coffer_memory_test};
+use crate::{enclave_id::EnclaveId, memory::{coffer_mem_alloc, coffer_memory_init, coffer_memory_test}};
 
 pub struct CofferCallFunc;
 
 impl CofferCallFunc {
-    pub const COFFER_INIT: usize = 0x0_usize;
-    pub const COFFER_TEST: usize = 0x1000_usize;
+    const COFFER_INIT: usize = 0x0_usize;
+    const COFFER_MEM_ALLOC: usize = 0x1_usize;
+    const COFFER_TEST: usize = 0x1000_usize;
 }
 
 pub fn handle_coffer_call(function: usize, param: [usize; 7]) -> SbiRet {
@@ -16,6 +17,11 @@ pub fn handle_coffer_call(function: usize, param: [usize; 7]) -> SbiRet {
     match function {
         CofferCallFunc::COFFER_INIT => {
             coffer_memory_init(param[0], param[1])
+        },
+        CofferCallFunc::COFFER_MEM_ALLOC => {
+            // TODO: change this to use the correct enclave id
+            let tmp_eid = EnclaveId::Host;
+            coffer_mem_alloc(tmp_eid, param[0])
         },
         CofferCallFunc::COFFER_TEST => {
             coffer_memory_test()

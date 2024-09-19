@@ -4,6 +4,8 @@ use buddy_system_allocator::{Heap, LockedHeapWithRescue, LockedFrameAllocator};
 use spin::Once;
 use sbi_spec::binary::SbiRet;
 
+use crate::enclave_id::EnclaveId;
+
 struct MemoryPool {
     start: usize,
     size: usize,
@@ -19,23 +21,18 @@ static GLOBAL_HEAP: LockedHeapWithRescue::<ORDER> = LockedHeapWithRescue::<ORDER
 static FRAME_ALLOCATOR: Once<LockedFrameAllocator<FRAME_ORDER>> = Once::new();
 static MEMORY_POOL: Once<MemoryPool> = Once::new();
 
-fn global_heap_rescue(heap: &mut Heap<ORDER>, layout: &Layout) {
-    if layout.size() > FRAME_SIZE {
-        panic!("Trying to allocate 0x{:x} more than frame size (0x{:x})",
-            layout.size(), FRAME_SIZE);
-    }
+// ---------------------------------
+// Utility functions
 
-    let new_frame = frame_allocator().lock().alloc(1);
-    if let Some(frame) = new_frame {
-        let paddr = frame_to_paddr(frame);
-        unsafe {
-            heap.add_to_heap(paddr, paddr + FRAME_SIZE);
-        }
-        log::info!("Added to heap: 0x{:x}, frame: 0x{:x}", paddr, frame);
-    } else {
-        panic!("Global heap out of memory");
-    }
+fn align_up(addr: usize, align: usize) -> usize {
+    (addr + align - 1) & !(align - 1)
 }
+
+fn align_down(addr: usize, align: usize) -> usize {
+    addr & !(align - 1)
+}
+
+// ---------------------------------
 
 pub fn coffer_memory_init(pool_start: usize, pool_size: usize) -> SbiRet {
     log::info!("Initializing CofferSBI");
@@ -66,6 +63,42 @@ pub fn coffer_memory_init(pool_start: usize, pool_size: usize) -> SbiRet {
         1, pool_size / FRAME_SIZE - 1);
 
     SbiRet::success(0)
+}
+
+pub fn coffer_mem_alloc(eid: EnclaveId, size: usize) -> SbiRet {
+    log::debug!("CofferSBI mem_alloc");
+    log::debug!("{:?} is allocating 0x{:x} bytes", eid, size);
+    // align size to FRAME_SIZE
+    let aligned = align_up(size, FRAME_SIZE);
+    let num_frame = aligned / FRAME_SIZE;
+    if let Some(frame) = frame_allocator().lock().alloc(num_frame) {
+        let paddr = frame_to_paddr(frame);
+        log::debug!("Allocated 0x{:x} bytes at 0x{:x}", aligned, paddr);
+        SbiRet::success(paddr)
+    } else {
+        log::warn!("Allocation failed. No contiguous memory found for requested size: 0x{:x}", size);
+        SbiRet::denied()
+    }
+}
+
+// ---------------------------------
+
+fn global_heap_rescue(heap: &mut Heap<ORDER>, layout: &Layout) {
+    if layout.size() > FRAME_SIZE {
+        panic!("Trying to allocate 0x{:x} more than frame size (0x{:x})",
+            layout.size(), FRAME_SIZE);
+    }
+
+    let new_frame = frame_allocator().lock().alloc(1);
+    if let Some(frame) = new_frame {
+        let paddr = frame_to_paddr(frame);
+        unsafe {
+            heap.add_to_heap(paddr, paddr + FRAME_SIZE);
+        }
+        log::info!("Added to heap: 0x{:x}, frame: 0x{:x}", paddr, frame);
+    } else {
+        panic!("Global heap out of memory");
+    }
 }
 
 fn frame_allocator() -> &'static LockedFrameAllocator<FRAME_ORDER> {
