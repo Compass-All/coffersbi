@@ -156,7 +156,7 @@ fn coffer_memory_test1() -> SbiRet {
 
 
 fn coffer_memory_test0() -> SbiRet {
-    log::debug!("CofferSBI test");
+    log::debug!("CofferSBI memory test");
 
     let heap_total = GLOBAL_HEAP.lock().stats_total_bytes();
     log::debug!("Global heap total: 0x{:x}", heap_total);
