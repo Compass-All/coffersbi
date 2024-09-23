@@ -34,7 +34,7 @@ fn align_down(addr: usize, align: usize) -> usize {
 
 // ---------------------------------
 
-pub fn coffer_memory_init(pool_start: usize, pool_size: usize) -> SbiRet {
+pub(crate) fn coffer_memory_init(pool_start: usize, pool_size: usize) -> SbiRet {
     log::info!("Initializing CofferSBI");
 
     if pool_start == 0 || pool_size <= FRAME_SIZE || pool_size % FRAME_SIZE != 0 {
@@ -65,7 +65,7 @@ pub fn coffer_memory_init(pool_start: usize, pool_size: usize) -> SbiRet {
     SbiRet::success(0)
 }
 
-pub fn coffer_mem_alloc(eid: EnclaveId, size: usize) -> SbiRet {
+pub(crate) fn coffer_mem_alloc(eid: EnclaveId, size: usize) -> SbiRet {
     log::debug!("CofferSBI mem_alloc");
     log::debug!("{:?} is allocating 0x{:x} bytes", eid, size);
     // align size to FRAME_SIZE

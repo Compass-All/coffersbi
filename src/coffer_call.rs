@@ -9,7 +9,7 @@ impl CofferCallFunc {
     const COFFER_TEST: usize = 0x1000_usize;
 }
 
-pub fn handle_coffer_call(function: usize, param: [usize; 7]) -> SbiRet {
+pub(crate) fn handle_coffer_call(function: usize, param: [usize; 7]) -> SbiRet {
     log::debug!("function: 0x{:x}", function);
     log::debug!("param: {:?}", param);
     log::debug!("param hex: {:x?}", param);

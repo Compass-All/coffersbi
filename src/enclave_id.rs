@@ -1,5 +1,5 @@
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum EnclaveId {
+pub(crate) enum EnclaveId {
     Coffer,
     Host,
     Encl(u32),
