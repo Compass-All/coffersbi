@@ -35,7 +35,7 @@ fn align_down(addr: usize, align: usize) -> usize {
 // ---------------------------------
 
 pub(crate) fn coffer_memory_init(pool_start: usize, pool_size: usize) -> SbiRet {
-    log::info!("Initializing CofferSBI");
+    log::info!("Initializing CofferSBI Memory");
 
     if pool_start == 0 || pool_size <= FRAME_SIZE || pool_size % FRAME_SIZE != 0 {
         log::warn!("Invalid pool address or size");
