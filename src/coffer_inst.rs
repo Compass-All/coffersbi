@@ -1,6 +1,7 @@
 use fast_trap::FastContext;
 
 use crate::coffer_call::handle_coffer_call;
+use crate::message_call::handle_message_call;
 
 pub struct CofferInst;
 
@@ -25,7 +26,9 @@ pub fn emulate_coffer_inst(inst: usize, ctx: &mut FastContext) {
             todo!()
         },
         CofferInst::MESSAGE_CALL => {
-            todo!()
+            let [a0, a1, a2, a3, a4, a5, a6, a7] = ctx.regs().a;
+            let ret = handle_message_call(a7, [a0, a1, a2, a3, a4, a5, a6]);
+            ctx.regs().a = [ret.error, ret.value, a2, a3, a4, a5, a6, a7];
         },
         _ => panic!("Invalid CofferSBI instruction!"),
     }
