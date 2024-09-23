@@ -127,7 +127,7 @@ fn _paddr_to_frame(paddr: usize) -> usize {
 
 
 // test
-pub fn coffer_memory_test(test_id: usize) -> SbiRet {
+pub(crate) fn coffer_memory_test(test_id: usize) -> SbiRet {
     match test_id {
         0 => coffer_memory_test0(),
         1 => coffer_memory_test1(),
