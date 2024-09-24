@@ -36,7 +36,7 @@ static INITIALIZED: Once<()> = Once::new();
 fn coffer_init(param: [usize; 7]) -> SbiRet {
     if let Some(_) = INITIALIZED.get() {
         log::warn!("CofferSBI has already been initialized");
-        return SbiRet::invalid_param();
+        return SbiRet::denied();
     } else {
         INITIALIZED.call_once(|| ());
     }
