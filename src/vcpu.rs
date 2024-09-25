@@ -4,25 +4,25 @@ use fast_trap::FlowContext;
 
 #[derive(Debug, Clone)]
 struct SCsr {
-    sstatus: u64,
-    sscratch: u64,
-    sepc: u64,
-    stvec: u64,
-    satp: u64,
-    scause: u64,
-    stval: u64,
-    sip: u64,
-    sie: u64,
+    sstatus: usize,
+    sscratch: usize,
+    sepc: usize,
+    stvec: usize,
+    satp: usize,
+    scause: usize,
+    stval: usize,
+    sip: usize,
+    sie: usize,
 }
 
 #[derive(Debug, Clone)]
 struct MCsr {
-    mstatus: u64,
-    mepc: u64,
-    mip: u64,
-    mie: u64,
-    medeleg: u64,
-    mideleg: u64,
+    mstatus: usize,
+    mepc: usize,
+    mip: usize,
+    mie: usize,
+    medeleg: usize,
+    mideleg: usize,
 }
 
 pub(crate) struct VCpu {
