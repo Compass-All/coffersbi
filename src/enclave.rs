@@ -11,9 +11,9 @@ struct Enclave {
 }
 
 impl Enclave {
-    pub fn new() -> Self {
+    pub fn new(start_pc: usize) -> Self {
         let mut vcpus = Vec::with_capacity(NUM_HART_MAX);
-        vcpus.push(VCpu::new());
+        vcpus.push(VCpu::init_context(start_pc));
         Enclave {
             vcpus
         }
@@ -25,8 +25,11 @@ type LockedEnclaveVec = RwLock<Vec<RwLock<Enclave>>>;
 static ENCLAVE_VEC: Once<LockedEnclaveVec> = Once::new();
 
 fn create_empty_enclave() {
+    // randomly chosen. To be replaced with an allocated address
+    let start_pc = 0x1_4000_0000_usize;
+
     let mut enclaves = ENCLAVE_VEC.get().unwrap().write();
-    enclaves.push(RwLock::new(Enclave::new()));
+    enclaves.push(RwLock::new(Enclave::new(start_pc)));
 }
 
 

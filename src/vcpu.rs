@@ -87,12 +87,12 @@ impl Debug for VCpu {
 }
 
 impl VCpu {
-    pub fn new() -> Self {
+    pub fn init_context(start_pc: usize) -> Self {
         VCpu {
             gpr: FlowContext::ZERO,
             fpr: [0.0; 32],
             scsr: SCsr {
-                sstatus: 0,
+                sstatus: 0b11 << 13, // sstatus.fs: FS::Dirty
                 sscratch: 0,
                 sepc: 0,
                 stvec: 0,
@@ -103,12 +103,24 @@ impl VCpu {
                 sie: 0,
             },
             mcsr: MCsr {
-                mstatus: 0,
-                mepc: 0,
-                mip: 0,
-                mie: 0,
-                medeleg: 0,
-                mideleg: 0,
+                mstatus: 0b11   << 13   // mstatus.fs: FS::Dirty
+                       | 0b1    << 11   // mstatus.mpp: MPP::Supervisor
+                       | 0b1    << 1    // mstatus.sie: true
+                       | 0b1    << 18, // mstatus.sum: true
+                mepc: start_pc,
+                mip: 0_usize,
+                mie: 0b1    << 1    // mie.ssoft
+                   | 0b1    << 3    // mie.msoft
+                   | 0b1    << 5    // mie.stimer
+                   | 0b1    << 7    // mie.mtimer
+                   | 0b1    << 9, // mie.sext
+                medeleg: 0b1    << 0    // medeleg.instruction_misaligned
+                       | 0b1    << 3    // medeleg.breakpoint
+                       | 0b1    << 4    // medeleg.load_misaligned
+                       | 0b1    << 6, // medeleg.store_misaligned
+                mideleg: 0b1    << 1    // mideleg.ssoft
+                       | 0b1    << 5    // mideleg.stimer
+                       | 0b1    << 9, // mideleg.sext
             },
         }
     }
