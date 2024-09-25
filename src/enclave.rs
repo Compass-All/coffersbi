@@ -3,13 +3,16 @@ use sbi_spec::binary::SbiRet;
 use spin::{Once, RwLock};
 use crate::vcpu::VCpu;
 
+// Remember to change this value together with RustSBI's prototyper/src/trap_stack.rs
+const NUM_HART_MAX: usize = 8;
+
 struct Enclave {
     vcpus: Vec<VCpu>,
 }
 
 impl Enclave {
     pub fn new() -> Self {
-        let mut vcpus = Vec::with_capacity(8);
+        let mut vcpus = Vec::with_capacity(NUM_HART_MAX);
         vcpus.push(VCpu::new());
         Enclave {
             vcpus
