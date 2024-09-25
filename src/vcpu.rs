@@ -1,8 +1,9 @@
-use core::fmt::{self, Formatter, Debug};
+use core::fmt::{self, Debug, Formatter};
 
+use alloc::{string::String, vec::Vec};
 use fast_trap::FlowContext;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 struct SCsr {
     sstatus: usize,
     sscratch: usize,
@@ -15,7 +16,23 @@ struct SCsr {
     sie: usize,
 }
 
-#[derive(Debug, Clone)]
+impl Debug for SCsr {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Supervisor CSR")
+            .field("sstatus", &format!("{:#x}", self.sstatus))
+            .field("sscratch", &format!("{:#x}", self.sscratch))
+            .field("sepc", &format!("{:#x}", self.sepc))
+            .field("stvec", &format!("{:#x}", self.stvec))
+            .field("satp", &format!("{:#x}", self.satp))
+            .field("scause", &format!("{:#x}", self.scause))
+            .field("stval", &format!("{:#x}", self.stval))
+            .field("sip", &format!("{:#x}", self.sip))
+            .field("sie", &format!("{:#x}", self.sie))
+            .finish()
+    }
+}
+
+#[derive(Clone)]
 struct MCsr {
     mstatus: usize,
     mepc: usize,
@@ -23,6 +40,20 @@ struct MCsr {
     mie: usize,
     medeleg: usize,
     mideleg: usize,
+}
+
+// fmt MCsr using hex
+impl Debug for MCsr {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Machine CSR")
+            .field("mstatus", &format!("{:#x}", self.mstatus))
+            .field("mepc", &format!("{:#x}", self.mepc))
+            .field("mip", &format!("{:#x}", self.mip))
+            .field("mie", &format!("{:#x}", self.mie))
+            .field("medeleg", &format!("{:#x}", self.medeleg))
+            .field("mideleg", &format!("{:#x}", self.mideleg))
+            .finish()
+    }
 }
 
 pub(crate) struct VCpu {
@@ -54,32 +85,38 @@ impl Clone for VCpu {
 
 impl Debug for VCpu {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let gpr = FlowContext {
-            ra: self.gpr.ra,
-            t: self.gpr.t,
-            a: self.gpr.a,
-            s: self.gpr.s,
-            gp: self.gpr.gp,
-            tp: self.gpr.tp,
-            sp: self.gpr.sp,
-            pc: self.gpr.pc,
-        };
-        f.debug_struct("General Purpose Registers")
-            .field("ra", &gpr.ra)
-            .field("t", &gpr.t)
-            .field("a", &gpr.a)
-            .field("s", &gpr.s)
-            .field("gp", &gpr.gp)
-            .field("tp", &gpr.tp)
-            .field("sp", &gpr.sp)
-            .field("pc", &gpr.pc)
-            .finish()?;
+        // Helper function to format arrays in hex format
+        fn format_compact_hex_array<T: fmt::LowerHex>(array: &[T]) -> String {
+            let formatted_array: Vec<String> = array
+                .iter()
+                .map(|val| format!("{:#x}", val)) // Format each element in hex
+                .collect();
+            format!("[ {} ]", formatted_array.join(", ")) // Join elements with comma and enclose in brackets
+        }
+        fn format_compact_array<T: fmt::Debug>(array: &[T]) -> String {
+            let formatted_array: Vec<String> = array
+                .iter()
+                .map(|val| format!("{:?}", val)) // Format each element in hex
+                .collect();
+            format!("[ {} ]", formatted_array.join(", ")) // Join elements with comma and enclose in brackets
+        }
+        writeln!(f, "General Purpose Registers")?;
+        writeln!(f, "ra: {:#x}", self.gpr.ra)?;
+        writeln!(f, "t: {}", format_compact_hex_array(&self.gpr.t))?;
+        writeln!(f, "a: {}", format_compact_hex_array(&self.gpr.a))?;
+        writeln!(f, "s: {}", format_compact_hex_array(&self.gpr.s))?;
+        writeln!(f, "gp: {:#x}", self.gpr.gp)?;
+        writeln!(f, "tp: {:#x}", self.gpr.tp)?;
+        writeln!(f, "sp: {:#x}", self.gpr.sp)?;
+        writeln!(f, "pc: {:#x}", self.gpr.pc)?;
         f.debug_struct("Floating Point Registers")
-            .field("fpr", &self.fpr)
+            .field("fpr", &format_compact_array(&self.fpr))
             .finish()?;
+        writeln!(f)?;
         f.debug_struct("Supervisor CSR")
             .field("scsr", &self.scsr)
             .finish()?;
+        writeln!(f)?;
         f.debug_struct("Machine CSR")
             .field("mcsr", &self.mcsr)
             .finish()

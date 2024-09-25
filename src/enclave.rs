@@ -74,9 +74,7 @@ pub(crate) fn coffer_sm_test() -> SbiRet {
         // Print a0..a2 of the first vCPU
         let encl1 = &enclaves[0].read();
         let vcpus = &encl1.vcpus;
-        log::debug!("a0: 0x{:x}", vcpus[0].gpr.a[0]);
-        log::debug!("a1: 0x{:x}", vcpus[0].gpr.a[1]);
-        log::debug!("a2: 0x{:x}", vcpus[0].gpr.a[2]);
+        log::debug!("vcpu 0:\n{:#?}", vcpus[0]);
     }
 
     SbiRet::success(0)
