@@ -1,5 +1,8 @@
+use core::fmt::{self, Formatter, Debug};
+
 use fast_trap::FlowContext;
 
+#[derive(Debug, Clone)]
 struct SCsr {
     sstatus: u64,
     sscratch: u64,
@@ -12,6 +15,7 @@ struct SCsr {
     sie: u64,
 }
 
+#[derive(Debug, Clone)]
 struct MCsr {
     mstatus: u64,
     mepc: u64,
@@ -26,6 +30,60 @@ pub(crate) struct VCpu {
     fpr: [f64; 32], // Currently only 64-bit floating point registers are supported
     scsr: SCsr,
     mcsr: MCsr,
+}
+
+impl Clone for VCpu {
+    fn clone(&self) -> Self {
+        VCpu {
+            gpr: FlowContext {
+                ra: self.gpr.ra,
+                t: self.gpr.t,
+                a: self.gpr.a,
+                s: self.gpr.s,
+                gp: self.gpr.gp,
+                tp: self.gpr.tp,
+                sp: self.gpr.sp,
+                pc: self.gpr.pc,
+            },
+            fpr: self.fpr.clone(),
+            scsr: self.scsr.clone(),
+            mcsr: self.mcsr.clone(),
+        }
+    }
+}
+
+impl Debug for VCpu {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let gpr = FlowContext {
+            ra: self.gpr.ra,
+            t: self.gpr.t,
+            a: self.gpr.a,
+            s: self.gpr.s,
+            gp: self.gpr.gp,
+            tp: self.gpr.tp,
+            sp: self.gpr.sp,
+            pc: self.gpr.pc,
+        };
+        f.debug_struct("General Purpose Registers")
+            .field("ra", &gpr.ra)
+            .field("t", &gpr.t)
+            .field("a", &gpr.a)
+            .field("s", &gpr.s)
+            .field("gp", &gpr.gp)
+            .field("tp", &gpr.tp)
+            .field("sp", &gpr.sp)
+            .field("pc", &gpr.pc)
+            .finish()?;
+        f.debug_struct("Floating Point Registers")
+            .field("fpr", &self.fpr)
+            .finish()?;
+        f.debug_struct("Supervisor CSR")
+            .field("scsr", &self.scsr)
+            .finish()?;
+        f.debug_struct("Machine CSR")
+            .field("mcsr", &self.mcsr)
+            .finish()
+    }
 }
 
 impl VCpu {
