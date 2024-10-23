@@ -71,6 +71,10 @@ pub(crate) fn coffer_mem_alloc(eid: EnclaveId, size: usize) -> SbiRet {
     // align size to FRAME_SIZE
     let aligned = align_up(size, FRAME_SIZE);
     let num_frame = aligned / FRAME_SIZE;
+    log::debug!("{:?} is allocating 0x{:x} bytes, aligned size = 0x{:x}, num_frame = 0x{:x}",
+        eid, size, aligned, num_frame);
+
+    // ask for num_frame frames from the frame allocator
     if let Some(frame) = frame_allocator().lock().alloc(num_frame) {
         let paddr = frame_to_paddr(frame);
         log::debug!("Allocated 0x{:x} bytes at 0x{:x}", aligned, paddr);
@@ -158,61 +162,120 @@ fn coffer_memory_test1() -> SbiRet {
 fn coffer_memory_test0() -> SbiRet {
     log::debug!("CofferSBI memory test");
 
+    // --- heap initial status
     let heap_total = GLOBAL_HEAP.lock().stats_total_bytes();
     log::debug!("Global heap total: 0x{:x}", heap_total);
 
     let heap_allocated = GLOBAL_HEAP.lock().stats_alloc_actual();
     log::debug!("1 Global heap allocated: 0x{:x}", heap_allocated);
 
+    // --- frame allocator test
+    let mut saved_frame1 = None;
+    let mut saved_frame2 = None;
+
+    // allocate 1 frame
     if let Some(frame1) = frame_allocator().lock().alloc(1) {
+        saved_frame1 = Some(frame1);
         log::debug!("Allocated 1 frame: 0x{:x}", frame1);
     } else {
         panic!("Frame allocator test 1 failed");
     }
-
+    
+    // allocate another frame
     if let Some(frame2) = frame_allocator().lock().alloc(1) {
+        saved_frame2 = Some(frame2);
         log::debug!("Allocated 1 frame: 0x{:x}", frame2);
     } else {
         panic!("Frame allocator test 2 failed");
     }
 
-    frame_allocator().lock().dealloc(1, 2);
-    log::debug!("Deallocated frame: 0x{:x}", 1);
+    // deallocate the frames
+    if let Some(frame1) = saved_frame1 {
+        frame_allocator().lock().dealloc(frame1, 1);
+        log::debug!("Deallocated 1 frame: 0x{:x}", frame1);
+    }
 
+    if let Some(frame2) = saved_frame2 {
+        frame_allocator().lock().dealloc(frame2, 1);
+        log::debug!("Deallocated 1 frame: 0x{:x}", frame2);
+    }
+
+    // allocate 2 frames
     if let Some(frame1) = frame_allocator().lock().alloc(2) {
+        saved_frame1 = Some(frame1);
         log::debug!("Allocated 2 frames: 0x{:x}", frame1);
     } else {
         panic!("Frame allocator test 3 failed");
     }
 
+    // allocate 7 aligned frames
     if let Some(frame2) = frame_allocator().lock().alloc_aligned(Layout::from_size_align(7, 8).unwrap()) {
+        saved_frame2 = Some(frame2);
         log::debug!("Allocated aligned 7 frames: 0x{:x}", frame2);
     } else {
         panic!("Frame allocator test 4 failed");
     }
 
+    // deallocate the frames
+    if let Some(frame1) = saved_frame1 {
+        frame_allocator().lock().dealloc(frame1, 2);
+        log::debug!("Deallocated 2 frame: 0x{:x}", frame1);
+    }
+
+    if let Some(frame2) = saved_frame2 {
+        frame_allocator().lock().dealloc(frame2, 7);
+        log::debug!("Deallocated 7 frame: 0x{:x}", frame2);
+    }
+
+    // allocate 100 frames
     if let Some(frame1) = frame_allocator().lock().alloc(100) {
+        saved_frame1 = Some(frame1);
         log::debug!("Allocated 100 frame: 0x{:x}", frame1);
     } else {
         panic!("Frame allocator test 5 failed");
     }
 
+    // deallocate 100 frames
+    if let Some(frame1) = saved_frame1 {
+        frame_allocator().lock().dealloc(frame1, 100);
+        log::debug!("Deallocated 100 frame: 0x{:x}", frame1);
+    }
+
+    // --- heap test
     let heap_allocated = GLOBAL_HEAP.lock().stats_alloc_actual();
     log::debug!("Global heap allocated: 0x{:x}", heap_allocated);
 
+    // allocate a vector
     let vec = vec![0; 10];
     log::debug!("Allocated vec: {:?}", vec);
 
+    let heap_total = GLOBAL_HEAP.lock().stats_total_bytes();
+    log::debug!("2 Global heap total: 0x{:x}", heap_total);
     let heap_allocated = GLOBAL_HEAP.lock().stats_alloc_actual();
     log::debug!("2 Global heap allocated: 0x{:x}", heap_allocated);
 
+    // allocate a vector with capacity in the remaining heap
     let len = heap_total - heap_allocated;
-    let mut vec: Vec<u8> = Vec::with_capacity(len);
+    let mut vec1: Vec<u8> = Vec::with_capacity(len);
+    log::debug!("3 Allocated a vec with capaticy = 0x{:x}", len);
 
+    vec1.push(0);  // the rescue should work, otherwise trigger OOM
     let heap_allocated = GLOBAL_HEAP.lock().stats_alloc_actual();
     log::debug!("3 Global heap allocated: 0x{:x}", heap_allocated);
+    let heap_total = GLOBAL_HEAP.lock().stats_total_bytes();
+    log::debug!("3 Global heap total: 0x{:x}", heap_total);
+    
+    // allocate a vector with capacity = 0x1000
+    let len = 0x1000;
+    let mut vec2: Vec<u8> = Vec::with_capacity(len);
+    log::debug!("4 Allocated a vec with capaticy = 0x{:x}", len);
 
-    vec.push(0); // should trigger OOM
+    let heap_total = GLOBAL_HEAP.lock().stats_total_bytes();
+    log::debug!("4 Global heap total: 0x{:x}", heap_total);
+    let heap_allocated = GLOBAL_HEAP.lock().stats_alloc_actual();
+    log::debug!("4 Global heap allocated: 0x{:x}", heap_allocated);
+    
 
+    log::debug!("CofferSBI memory test0 passed.");
     SbiRet::success(0)
 }

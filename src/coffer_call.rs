@@ -11,7 +11,7 @@ impl CofferCallFunc {
 }
 
 pub(crate) fn handle_coffer_call(function: usize, param: [usize; 7]) -> SbiRet {
-    log::debug!("function: 0x{:x}", function);
+    log::debug!("coffer call function_id = 0x{:x}", function);
     log::debug!("param: {:?}", param);
     log::debug!("param hex: {:x?}", param);
 
@@ -49,6 +49,7 @@ fn coffer_init(param: [usize; 7]) -> SbiRet {
     if ret.is_err() {
         return ret;
     }
+    log::debug!("Coffer Init Successfully");
     return SbiRet::success(0);
 }
 
