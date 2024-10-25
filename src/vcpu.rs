@@ -1,5 +1,6 @@
 use core::fmt::{self, Debug, Formatter};
 
+use riscv::register::*;
 use alloc::{string::String, vec::Vec};
 use fast_trap::FlowContext;
 
@@ -100,6 +101,7 @@ impl Debug for VCpu {
                 .collect();
             format!("[ {} ]", formatted_array.join(", ")) // Join elements with comma and enclose in brackets
         }
+
         writeln!(f, "General Purpose Registers")?;
         writeln!(f, "ra: {:#x}", self.gpr.ra)?;
         writeln!(f, "t: {}", format_compact_hex_array(&self.gpr.t))?;
@@ -109,17 +111,79 @@ impl Debug for VCpu {
         writeln!(f, "tp: {:#x}", self.gpr.tp)?;
         writeln!(f, "sp: {:#x}", self.gpr.sp)?;
         writeln!(f, "pc: {:#x}", self.gpr.pc)?;
+
         f.debug_struct("Floating Point Registers")
             .field("fpr", &format_compact_array(&self.fpr))
             .finish()?;
         writeln!(f)?;
+
         f.debug_struct("Supervisor CSR")
             .field("scsr", &self.scsr)
             .finish()?;
         writeln!(f)?;
+
         f.debug_struct("Machine CSR")
             .field("mcsr", &self.mcsr)
             .finish()
+    }
+}
+
+impl VCpu {
+    fn save_csr(&mut self) {
+        self.mcsr.mepc = mepc::read();  // return usize, not struct
+        self.mcsr.medeleg = medeleg::read().bits();
+        self.mcsr.mideleg = mideleg::read().bits();
+        self.mcsr.mstatus = mstatus::read().bits();
+        self.mcsr.mip = mip::read().bits();
+        self.mcsr.mie = mie::read().bits();
+        
+        self.scsr.sepc = sepc::read();
+        self.scsr.sstatus = sstatus::read().bits();
+        self.scsr.sscratch = sscratch::read();
+        self.scsr.stvec = stvec::read().bits();
+        self.scsr.satp = satp::read().bits();
+        self.scsr.scause = scause::read().bits();
+        self.scsr.sip = sip::read().bits();
+        self.scsr.sie = sie::read().bits();
+        self.scsr.stval = stval::read();
+
+    }
+
+    fn load_csr(&mut self) {
+        unsafe {
+            sstatus::write(self.scsr.sstatus);
+            sscratch::write(self.scsr.sscratch);
+            sepc::write(self.scsr.sepc);
+            stvec::write(self.scsr.stvec);
+            satp::write(self.scsr.satp);
+            scause::write(self.scsr.scause);
+            stval::write(self.scsr.stval);
+            sip::write(self.scsr.sip);
+            sie::write(self.scsr.sie);
+
+            mstatus::write(mstatus::Mstatus::from(self.mcsr.mstatus));
+            mepc::write(self.mcsr.mepc);
+            mip::write(self.mcsr.mip);
+            mie::write(self.mcsr.mie);
+            medeleg::write(self.mcsr.medeleg);
+            mideleg::write(self.mcsr.mideleg);
+        }
+    }
+    
+    fn save_gpr(&mut self) {
+       // TODO
+    }
+
+    fn load_gpr(&mut self) {
+       // TODO
+    }
+
+    fn save_fprs(&mut self) {
+        // TODO
+    }
+
+    fn load_fprs(&mut self) {
+        // TODO
     }
 }
 
@@ -160,5 +224,17 @@ impl VCpu {
                        | 0b1    << 9, // mideleg.sext
             },
         }
+    }
+
+    pub fn save_context(&mut self) {
+        self.save_gpr();
+        self.save_fprs();
+        self.save_csr();
+    }
+
+    pub fn load_context(&mut self) {
+        self.load_gpr();
+        self.load_fprs();
+        self.load_csr();
     }
 }

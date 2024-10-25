@@ -77,5 +77,18 @@ pub(crate) fn coffer_sm_test() -> SbiRet {
         log::debug!("vcpu 0:\n{:#?}", vcpus[0]);
     }
 
+    // vcpu save and load context test
+    {
+        let enclaves = ENCLAVE_VEC.get().unwrap().read();
+        let encl1 = &mut enclaves[0].write();  // write lock, or it will raise "cannot borrow as mutable"
+        encl1.vcpus[0].save_context();
+        encl1.vcpus[0].gpr.a[0] = 0x98765432;
+        encl1.vcpus[0].load_context();
+        let vcpus = &encl1.vcpus;
+        log::debug!("vcpu 0:\n{:#?}", vcpus[0]);
+    }
+
+
+    log::debug!("CofferSBI Security Monitor test passed.");
     SbiRet::success(0)
 }

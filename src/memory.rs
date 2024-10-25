@@ -67,7 +67,7 @@ pub(crate) fn coffer_memory_init(pool_start: usize, pool_size: usize) -> SbiRet 
 
 pub(crate) fn coffer_mem_alloc(eid: EnclaveId, size: usize) -> SbiRet {
     log::debug!("CofferSBI mem_alloc");
-    log::debug!("{:?} is allocating 0x{:x} bytes", eid, size);
+    
     // align size to FRAME_SIZE
     let aligned = align_up(size, FRAME_SIZE);
     let num_frame = aligned / FRAME_SIZE;
