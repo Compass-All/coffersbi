@@ -1,4 +1,5 @@
 use core::fmt::{self, Debug, Formatter};
+use core::arch::asm;
 
 use riscv::register::*;
 use alloc::{string::String, vec::Vec};
@@ -58,10 +59,11 @@ impl Debug for MCsr {
 }
 
 pub(crate) struct VCpu {
-    pub(crate) gpr: FlowContext,
-    fpr: [f64; 32], // Currently only 64-bit floating point registers are supported
     scsr: SCsr,
     mcsr: MCsr,
+    pub(crate) gpr: FlowContext,
+    #[cfg(target_feature = "f")]  // not test yet
+    fpr: [f64; 32], // Currently only 64-bit floating point registers are supported
 }
 
 impl Clone for VCpu {
@@ -77,6 +79,7 @@ impl Clone for VCpu {
                 sp: self.gpr.sp,
                 pc: self.gpr.pc,
             },
+            #[cfg(target_feature = "f")]
             fpr: self.fpr.clone(),
             scsr: self.scsr.clone(),
             mcsr: self.mcsr.clone(),
@@ -112,10 +115,13 @@ impl Debug for VCpu {
         writeln!(f, "sp: {:#x}", self.gpr.sp)?;
         writeln!(f, "pc: {:#x}", self.gpr.pc)?;
 
-        f.debug_struct("Floating Point Registers")
-            .field("fpr", &format_compact_array(&self.fpr))
-            .finish()?;
-        writeln!(f)?;
+        #[cfg(target_feature = "f")]
+        {
+            f.debug_struct("Floating Point Registers")
+                .field("fpr", &format_compact_array(&self.fpr))
+                .finish()?;
+            writeln!(f)?;
+        }
 
         f.debug_struct("Supervisor CSR")
             .field("scsr", &self.scsr)
@@ -146,7 +152,6 @@ impl VCpu {
         self.scsr.sip = sip::read().bits();
         self.scsr.sie = sie::read().bits();
         self.scsr.stval = stval::read();
-
     }
 
     fn load_csr(&mut self) {
@@ -178,12 +183,86 @@ impl VCpu {
        // TODO
     }
 
-    fn save_fprs(&mut self) {
-        // TODO
+    #[cfg(target_feature = "f")]
+    fn save_fprs(&mut self) {  // not test yet
+        unsafe {
+            asm!(
+                "fsd f0, 0*8({0})",
+                "fsd f1, 1*8({0})",
+                "fsd f2, 2*8({0})",
+                "fsd f3, 3*8({0})",
+                "fsd f4, 4*8({0})",
+                "fsd f5, 5*8({0})",
+                "fsd f6, 6*8({0})",
+                "fsd f7, 7*8({0})",
+                "fsd f8, 8*8({0})",
+                "fsd f9, 9*8({0})",
+                "fsd f10, 10*8({0})",
+                "fsd f11, 11*8({0})",
+                "fsd f12, 12*8({0})",
+                "fsd f13, 13*8({0})",
+                "fsd f14, 14*8({0})",
+                "fsd f15, 15*8({0})",
+                "fsd f16, 16*8({0})",
+                "fsd f17, 17*8({0})",
+                "fsd f18, 18*8({0})",
+                "fsd f19, 19*8({0})",
+                "fsd f20, 20*8({0})",
+                "fsd f21, 21*8({0})",
+                "fsd f22, 22*8({0})",
+                "fsd f23, 23*8({0})",
+                "fsd f24, 24*8({0})",
+                "fsd f25, 25*8({0})",
+                "fsd f26, 26*8({0})",
+                "fsd f27, 27*8({0})",
+                "fsd f28, 28*8({0})",
+                "fsd f29, 29*8({0})",
+                "fsd f30, 30*8({0})",
+                "fsd f31, 31*8({0})",
+                in(reg) self.fpr.as_ptr(),
+            );
+        }
     }
 
-    fn load_fprs(&mut self) {
-        // TODO
+    #[cfg(target_feature = "f")]
+    fn load_fprs(&mut self) {  // not test yet
+        unsafe {
+            asm!(
+                "fld f0, 0*8({0})",
+                "fld f1, 1*8({0})",
+                "fld f2, 2*8({0})",
+                "fld f3, 3*8({0})",
+                "fld f4, 4*8({0})",
+                "fld f5, 5*8({0})",
+                "fld f6, 6*8({0})",
+                "fld f7, 7*8({0})",
+                "fld f8, 8*8({0})",
+                "fld f9, 9*8({0})",
+                "fld f10, 10*8({0})",
+                "fld f11, 11*8({0})",
+                "fld f12, 12*8({0})",
+                "fld f13, 13*8({0})",
+                "fld f14, 14*8({0})",
+                "fld f15, 15*8({0})",
+                "fld f16, 16*8({0})",
+                "fld f17, 17*8({0})",
+                "fld f18, 18*8({0})",
+                "fld f19, 19*8({0})",
+                "fld f20, 20*8({0})",
+                "fld f21, 21*8({0})",
+                "fld f22, 22*8({0})",
+                "fld f23, 23*8({0})",
+                "fld f24, 24*8({0})",
+                "fld f25, 25*8({0})",
+                "fld f26, 26*8({0})",
+                "fld f27, 27*8({0})",
+                "fld f28, 28*8({0})",
+                "fld f29, 29*8({0})",
+                "fld f30, 30*8({0})",
+                "fld f31, 31*8({0})",
+                in(reg) self.fpr.as_ptr(),
+            );
+        }
     }
 }
 
@@ -191,6 +270,7 @@ impl VCpu {
     pub fn init_context(start_pc: usize) -> Self {
         VCpu {
             gpr: FlowContext::ZERO,
+            #[cfg(target_feature = "f")]
             fpr: [0.0; 32],
             scsr: SCsr {
                 sstatus: 0b11 << 13, // sstatus.fs: FS::Dirty
@@ -228,12 +308,14 @@ impl VCpu {
 
     pub fn save_context(&mut self) {
         self.save_gpr();
+        #[cfg(target_feature = "f")]
         self.save_fprs();
         self.save_csr();
     }
 
     pub fn load_context(&mut self) {
         self.load_gpr();
+        #[cfg(target_feature = "f")]
         self.load_fprs();
         self.load_csr();
     }
