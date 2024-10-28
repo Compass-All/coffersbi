@@ -2,11 +2,14 @@ use alloc::vec::Vec;
 use sbi_spec::binary::SbiRet;
 use spin::{Once, RwLock};
 use crate::vcpu::VCpu;
+use crate::enclave_id::EnclaveId;
+use fast_trap::FlowContext;
 
 // Remember to change this value together with RustSBI's prototyper/src/trap_stack.rs
 const NUM_HART_MAX: usize = 8;
 
 struct Enclave {
+    eid: EnclaveId,
     vcpus: Vec<VCpu>,
 }
 
@@ -15,7 +18,8 @@ impl Enclave {
         let mut vcpus = Vec::with_capacity(NUM_HART_MAX);
         vcpus.push(VCpu::init_context(start_pc));
         Enclave {
-            vcpus
+            eid: EnclaveId::Encl(1),  // TODO: alocated by the allocator
+            vcpus: vcpus,
         }
     }
 }
@@ -23,14 +27,6 @@ impl Enclave {
 type LockedEnclaveVec = RwLock<Vec<RwLock<Enclave>>>;
 
 static ENCLAVE_VEC: Once<LockedEnclaveVec> = Once::new();
-
-fn create_empty_enclave() {
-    // randomly chosen. To be replaced with an allocated address
-    let start_pc = 0x1_4000_0000_usize;
-
-    let mut enclaves = ENCLAVE_VEC.get().unwrap().write();
-    enclaves.push(RwLock::new(Enclave::new(start_pc)));
-}
 
 
 pub(crate) fn coffer_sm_init() -> SbiRet {
@@ -41,7 +37,20 @@ pub(crate) fn coffer_sm_init() -> SbiRet {
     SbiRet::success(0)
 }
 
-pub(crate) fn coffer_sm_test() -> SbiRet {
+// ----- Utility functions -----
+fn create_empty_enclave() {
+    // randomly chosen. To be replaced with an allocated address
+    let start_pc = 0x1_4000_0000_usize;
+
+    let mut enclaves = ENCLAVE_VEC.get().unwrap().write();
+    enclaves.push(RwLock::new(Enclave::new(start_pc)));
+}
+
+
+
+// -----------------------------
+// test
+pub(crate) fn coffer_sm_test(ctx: &mut FlowContext) -> SbiRet {
     log::debug!("CofferSBI Security Monitor test");
 
     // Test read
@@ -81,9 +90,9 @@ pub(crate) fn coffer_sm_test() -> SbiRet {
     {
         let enclaves = ENCLAVE_VEC.get().unwrap().read();
         let encl1 = &mut enclaves[0].write();  // write lock, or it will raise "cannot borrow as mutable"
-        encl1.vcpus[0].save_context();
+        encl1.vcpus[0].save_context(ctx);
         encl1.vcpus[0].gpr.a[0] = 0x98765432;
-        encl1.vcpus[0].load_context();
+        encl1.vcpus[0].load_context(ctx);  // without save, it will load the initial context which trigger a panic
         let vcpus = &encl1.vcpus;
         log::debug!("vcpu 0:\n{:#?}", vcpus[0]);
     }

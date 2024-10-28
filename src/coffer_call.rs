@@ -1,7 +1,7 @@
 use sbi_spec::binary::SbiRet;
 use spin::Once;
 use crate::{enclave::{coffer_sm_init, coffer_sm_test}, enclave_id::EnclaveId, memory::{coffer_mem_alloc, coffer_memory_init, coffer_memory_test}};
-
+use fast_trap::FlowContext;
 pub struct CofferCallFunc;
 
 impl CofferCallFunc {
@@ -10,7 +10,7 @@ impl CofferCallFunc {
     const COFFER_TEST: usize = 0x1000_usize;
 }
 
-pub(crate) fn handle_coffer_call(function: usize, param: [usize; 7]) -> SbiRet {
+pub(crate) fn handle_coffer_call(function: usize, param: [usize; 7], ctx: &mut FlowContext) -> SbiRet {
     log::debug!("coffer call function_id = 0x{:x}", function);
     log::debug!("param: {:?}", param);
     log::debug!("param hex: {:x?}", param);
@@ -25,7 +25,7 @@ pub(crate) fn handle_coffer_call(function: usize, param: [usize; 7]) -> SbiRet {
             coffer_mem_alloc(tmp_eid, param[0])
         },
         CofferCallFunc::COFFER_TEST => {
-            coffer_test(param)
+            coffer_test(param, ctx)
         },
         _ => SbiRet::not_supported(),
     }
@@ -53,12 +53,12 @@ fn coffer_init(param: [usize; 7]) -> SbiRet {
     return SbiRet::success(0);
 }
 
-fn coffer_test(param: [usize; 7]) -> SbiRet {
+fn coffer_test(param: [usize; 7], ctx: &mut FlowContext) -> SbiRet {
     let test_id = param[0];
 
     match test_id {
         0 => coffer_memory_test(param[1]),
-        1 => coffer_sm_test(),
+        1 => coffer_sm_test(ctx),
         _ => SbiRet::not_supported(),
     }
 }

@@ -175,12 +175,28 @@ impl VCpu {
         }
     }
     
-    fn save_gpr(&mut self) {
-       // TODO
+    fn save_gpr(&mut self, gpr: &FlowContext) {
+        // FlowContext is a struct without Clone trait
+        self.gpr.ra = gpr.ra;
+        self.gpr.t = gpr.t;
+        self.gpr.a = gpr.a;
+        self.gpr.s = gpr.s;
+        self.gpr.gp = gpr.gp;
+        self.gpr.tp = gpr.tp;
+        self.gpr.sp = gpr.sp;
+        self.gpr.pc = gpr.pc;
     }
 
-    fn load_gpr(&mut self) {
-       // TODO
+    fn load_gpr(&mut self, gpr: &mut FlowContext) {
+        // FlowContext is a struct without Clone trait
+        gpr.ra = self.gpr.ra;
+        gpr.t = self.gpr.t;
+        gpr.a = self.gpr.a;
+        gpr.s = self.gpr.s;
+        gpr.gp = self.gpr.gp;
+        gpr.tp = self.gpr.tp;
+        gpr.sp = self.gpr.sp;
+        gpr.pc = self.gpr.pc;        
     }
 
     #[cfg(target_feature = "f")]
@@ -306,17 +322,22 @@ impl VCpu {
         }
     }
 
-    pub fn save_context(&mut self) {
-        self.save_gpr();
+    pub fn save_context(&mut self, ctx: &FlowContext) {
+        self.save_gpr(ctx);
         #[cfg(target_feature = "f")]
         self.save_fprs();
         self.save_csr();
     }
 
-    pub fn load_context(&mut self) {
-        self.load_gpr();
+    pub fn load_context(&mut self, ctx: &mut FlowContext) {
+        self.load_gpr(ctx);
         #[cfg(target_feature = "f")]
         self.load_fprs();
         self.load_csr();
     }
+}
+
+pub fn context_switch(from: &mut VCpu, to: &mut VCpu) {
+    from.save_context(&to.gpr);
+    to.load_context(&mut from.gpr);
 }
