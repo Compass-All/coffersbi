@@ -4,6 +4,7 @@ use spin::{Once, RwLock};
 use crate::vcpu::VCpu;
 use crate::enclave_id::EnclaveId;
 use fast_trap::FlowContext;
+use riscv::register::*;
 
 // Remember to change this value together with RustSBI's prototyper/src/trap_stack.rs
 const NUM_HART_MAX: usize = 8;
@@ -97,7 +98,53 @@ pub(crate) fn coffer_sm_test(ctx: &mut FlowContext) -> SbiRet {
         log::debug!("vcpu 0:\n{:#?}", vcpus[0]);
     }
 
+    // Test vcpu context load (will cause a panic)
+    // {
+    //     let enclaves = ENCLAVE_VEC.get().unwrap().read();
+    //     let encl1 = &mut enclaves[0].write();
+
+    //     encl1.vcpus[0].vcpu_csr_test();    // write 0x12345678 into vcpu's all csr 
+    //     encl1.vcpus[0].load_context(ctx);  // after load, it will cause a panic
+    //     show_current_csr();
+    // }
 
     log::debug!("CofferSBI Security Monitor test passed.");
     SbiRet::success(0)
+}
+
+// ------- Debugging -------
+fn show_current_csr() {
+    let mepc = mepc::read();
+    let medeleg = medeleg::read().bits();
+    let mideleg = mideleg::read().bits();
+    let mstatus = mstatus::read().bits();
+    let mip = mip::read().bits();
+    let mie = mie::read().bits();
+    
+    let sepc = sepc::read();
+    let sstatus = sstatus::read().bits();
+    let sscratch = sscratch::read();
+    let stvec = stvec::read().bits();
+    let satp = satp::read().bits();
+    let scause = scause::read().bits();
+    let sip = sip::read().bits();
+    let sie = sie::read().bits();
+    let stval = stval::read();
+    
+    log::debug!("mepc: 0x{:x}", mepc);
+    log::debug!("medeleg: 0x{:x}", medeleg);
+    log::debug!("mideleg: 0x{:x}", mideleg);
+    log::debug!("mstatus: 0x{:x}", mstatus);
+    log::debug!("mip: 0x{:x}", mip);
+    log::debug!("mie: 0x{:x}", mie);
+
+    log::debug!("sepc: 0x{:x}", sepc);
+    log::debug!("sstatus: 0x{:x}", sstatus);
+    log::debug!("sscratch: 0x{:x}", sscratch);
+    log::debug!("stvec: 0x{:x}", stvec);
+    log::debug!("satp: 0x{:x}", satp);
+    log::debug!("scause: 0x{:x}", scause);
+    log::debug!("sip: 0x{:x}", sip);
+    log::debug!("sie: 0x{:x}", sie);
+    log::debug!("stval: 0x{:x}", stval);
 }

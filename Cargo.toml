@@ -9,5 +9,5 @@ buddy_system_allocator = { version = "0.11.0", features = ["alloc", "use_spin"] 
 sbi-spec = { version = "0.0.7", features = ["legacy"] }
 fast-trap = { version = "0.0.1", features = ["riscv-m"] }
 spin = "0.9.8"
-# TODO
-riscv = { path = "../riscv/riscv", version = "0.12.1" }
+# add some csrs' read, write, bits methods in riscv
+riscv = { git = "https://github.com/GartonChan/riscv.git", branch = "rw_csr" }

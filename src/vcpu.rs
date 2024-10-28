@@ -289,7 +289,7 @@ impl VCpu {
             #[cfg(target_feature = "f")]
             fpr: [0.0; 32],
             scsr: SCsr {
-                sstatus: 0b11 << 13, // sstatus.fs: FS::Dirty
+                sstatus: 0b11 << 13,  // sstatus.fs: FS::Dirty
                 sscratch: 0,
                 sepc: 0,
                 stvec: 0,
@@ -300,24 +300,24 @@ impl VCpu {
                 sie: 0,
             },
             mcsr: MCsr {
-                mstatus: 0b11   << 13   // mstatus.fs: FS::Dirty
-                       | 0b1    << 11   // mstatus.mpp: MPP::Supervisor
-                       | 0b1    << 1    // mstatus.sie: true
-                       | 0b1    << 18, // mstatus.sum: true
+                mstatus: 0b11   << 13    // mstatus.fs: FS::Dirty
+                       | 0b1    << 11    // mstatus.mpp: MPP::Supervisor
+                       | 0b1    << 1     // mstatus.sie: true
+                       | 0b1    << 18,   // mstatus.sum: true
                 mepc: start_pc,
                 mip: 0_usize,
                 mie: 0b1    << 1    // mie.ssoft
                    | 0b1    << 3    // mie.msoft
                    | 0b1    << 5    // mie.stimer
                    | 0b1    << 7    // mie.mtimer
-                   | 0b1    << 9, // mie.sext
+                   | 0b1    << 9,   // mie.sext
                 medeleg: 0b1    << 0    // medeleg.instruction_misaligned
                        | 0b1    << 3    // medeleg.breakpoint
                        | 0b1    << 4    // medeleg.load_misaligned
-                       | 0b1    << 6, // medeleg.store_misaligned
+                       | 0b1    << 6,   // medeleg.store_misaligned
                 mideleg: 0b1    << 1    // mideleg.ssoft
                        | 0b1    << 5    // mideleg.stimer
-                       | 0b1    << 9, // mideleg.sext
+                       | 0b1    << 9,   // mideleg.sext
             },
         }
     }
@@ -334,6 +334,27 @@ impl VCpu {
         #[cfg(target_feature = "f")]
         self.load_fprs();
         self.load_csr();
+    }
+
+
+    // ------- test -------
+    pub fn vcpu_csr_test(&mut self) {   
+        self.mcsr.mepc = 0x12345678;
+        self.mcsr.medeleg = 0x12345678;
+        self.mcsr.mideleg = 0x12345678;
+        self.mcsr.mstatus = 0x12345678;
+        self.mcsr.mip = 0x12345678;
+        self.mcsr.mie = 0x12345678;
+
+        self.scsr.sepc = 0x12345678;
+        self.scsr.sstatus = 0x12345678;
+        self.scsr.sscratch = 0x12345678;
+        self.scsr.stvec = 0x12345678;
+        self.scsr.satp = 0x12345678;
+        self.scsr.scause = 0x12345678;
+        self.scsr.sip = 0x12345678;
+        self.scsr.sie = 0x12345678;
+        self.scsr.stval = 0x12345678;
     }
 }
 
