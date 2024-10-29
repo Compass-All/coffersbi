@@ -11,6 +11,7 @@ const NUM_HART_MAX: usize = 8;
 
 struct Enclave {
     eid: EnclaveId,
+    host_vcpu: VCpu,
     vcpus: Vec<VCpu>,
 }
 
@@ -20,6 +21,7 @@ impl Enclave {
         vcpus.push(VCpu::init_context(start_pc));
         Enclave {
             eid: EnclaveId::Encl(1),  // TODO: alocated by the allocator
+            host_vcpu: VCpu::init_context(0x0),
             vcpus: vcpus,
         }
     }
@@ -41,10 +43,10 @@ pub(crate) fn coffer_sm_init() -> SbiRet {
 // ----- Utility functions -----
 fn create_empty_enclave() {
     // randomly chosen. To be replaced with an allocated address
-    let start_pc = 0x1_4000_0000_usize;
+    let start_pc = 0x1_2000_0000_usize;
 
     let mut enclaves = ENCLAVE_VEC.get().unwrap().write();
-    enclaves.push(RwLock::new(Enclave::new(start_pc)));
+    enclaves.push(RwLock::new(Enclave::new(start_pc - 4)));  // after cofferInst handler, the pc will be increased by 4
 }
 
 
@@ -109,6 +111,31 @@ pub(crate) fn coffer_sm_test(ctx: &mut FlowContext) -> SbiRet {
     // }
 
     log::debug!("CofferSBI Security Monitor test passed.");
+    SbiRet::success(0)
+}
+
+pub(crate) fn coffer_enclave_test(ctx: &mut FlowContext) -> SbiRet {
+    log::debug!("CofferSBI Enclave test");
+
+    // entering enclave
+    {
+        log::debug!("entering enclave test");
+        create_empty_enclave();
+
+        let enclaves = ENCLAVE_VEC.get().unwrap().read();
+        let encl1 = &mut enclaves[0].write();
+
+        encl1.host_vcpu.save_context(ctx);  // save host context
+        encl1.vcpus[0].load_context(ctx);  // load enclave context
+        show_current_csr();
+
+        let vcpus = &encl1.vcpus;
+        log::debug!("vcpu 0:\n{:#?}", vcpus[0]);
+
+        show_current_csr();
+    }
+
+    log::debug!("CofferSBI Enclave created and going to enter...");
     SbiRet::success(0)
 }
 

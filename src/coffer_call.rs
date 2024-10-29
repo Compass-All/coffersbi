@@ -1,6 +1,6 @@
 use sbi_spec::binary::SbiRet;
 use spin::Once;
-use crate::{enclave::{coffer_sm_init, coffer_sm_test}, enclave_id::EnclaveId, memory::{coffer_mem_alloc, coffer_memory_init, coffer_memory_test}};
+use crate::{enclave::{coffer_sm_init, coffer_sm_test, coffer_enclave_test}, enclave_id::EnclaveId, memory::{coffer_mem_alloc, coffer_memory_init, coffer_memory_test}};
 use fast_trap::FlowContext;
 pub struct CofferCallFunc;
 
@@ -15,7 +15,7 @@ pub(crate) fn handle_coffer_call(function: usize, param: [usize; 7], ctx: &mut F
     log::debug!("param: {:?}", param);
     log::debug!("param hex: {:x?}", param);
 
-    match function {
+    match function {  // a7
         CofferCallFunc::COFFER_INIT => {
             coffer_init(param)
         },
@@ -59,6 +59,7 @@ fn coffer_test(param: [usize; 7], ctx: &mut FlowContext) -> SbiRet {
     match test_id {
         0 => coffer_memory_test(param[1]),
         1 => coffer_sm_test(ctx),
+        2 => coffer_enclave_test(ctx),
         _ => SbiRet::not_supported(),
     }
 }

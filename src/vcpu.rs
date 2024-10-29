@@ -154,7 +154,7 @@ impl VCpu {
         self.scsr.stval = stval::read();
     }
 
-    fn load_csr(&mut self) {
+    fn load_csr(&self) {
         unsafe {
             sstatus::write(self.scsr.sstatus);
             sscratch::write(self.scsr.sscratch);
@@ -187,7 +187,7 @@ impl VCpu {
         self.gpr.pc = gpr.pc;
     }
 
-    fn load_gpr(&mut self, gpr: &mut FlowContext) {
+    fn load_gpr(&self, gpr: &mut FlowContext) {
         // FlowContext is a struct without Clone trait
         gpr.ra = self.gpr.ra;
         gpr.t = self.gpr.t;
@@ -241,7 +241,7 @@ impl VCpu {
     }
 
     #[cfg(target_feature = "f")]
-    fn load_fprs(&mut self) {  // not test yet
+    fn load_fprs(&self) {  // not test yet
         unsafe {
             asm!(
                 "fld f0, 0*8({0})",
@@ -300,16 +300,17 @@ impl VCpu {
                 sie: 0,
             },
             mcsr: MCsr {
-                mstatus: 0b11   << 13    // mstatus.fs: FS::Dirty
-                       | 0b1    << 11    // mstatus.mpp: MPP::Supervisor
-                       | 0b1    << 1     // mstatus.sie: true
-                       | 0b1    << 18,   // mstatus.sum: true
+                mstatus: 0b11   << 13    // mstatus.FS: FS::Dirty
+                       | 0b01   << 11    // mstatus.MPP: MPP::Supervisor
+                       | 0b1    << 1     // mstatus.SIE: true
+                       | 0b1    << 18,   // mstatus.SUM: true
                 mepc: start_pc,
                 mip: 0_usize,
                 mie: 0b1    << 1    // mie.ssoft
                    | 0b1    << 3    // mie.msoft
-                   | 0b1    << 5    // mie.stimer
-                   | 0b1    << 7    // mie.mtimer
+                // TODO?
+                //    | 0b1    << 5    // mie.stimer
+                //    | 0b1    << 7    // mie.mtimer
                    | 0b1    << 9,   // mie.sext
                 medeleg: 0b1    << 0    // medeleg.instruction_misaligned
                        | 0b1    << 3    // medeleg.breakpoint
@@ -329,7 +330,7 @@ impl VCpu {
         self.save_csr();
     }
 
-    pub fn load_context(&mut self, ctx: &mut FlowContext) {
+    pub fn load_context(&self, ctx: &mut FlowContext) {
         self.load_gpr(ctx);
         #[cfg(target_feature = "f")]
         self.load_fprs();
@@ -358,7 +359,3 @@ impl VCpu {
     }
 }
 
-pub fn context_switch(from: &mut VCpu, to: &mut VCpu) {
-    from.save_context(&to.gpr);
-    to.load_context(&mut from.gpr);
-}
